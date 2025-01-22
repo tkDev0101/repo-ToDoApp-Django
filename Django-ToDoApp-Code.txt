@@ -1,0 +1,111 @@
+here is the code:
+
+
+Django Project name	-> todos
+Django App name		-> todoapp 
+
+----------------------------------------------------------------------------------------------
+models.py:
+
+from django.db import models
+
+class MytodoModel(models.Model):
+    task = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.task
+
+----------------------------------------------------------------------------------------------
+views.py:
+
+from django.shortcuts import render, redirect
+from .models import MytodoModel #Mytodo
+from .forms import TodoForm
+
+
+def alltodos(request):
+    tasks = MytodoModel.objects.all() #Model.objetcs.all()
+    form = TodoForm()
+
+    if request.method == 'POST':
+        form = TodoForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+
+    return render(request, 'alltodo.html',  {'task': tasks, 'form': form} )
+
+
+def updateItem(request, pk):
+    todo = MytodoModel.objects.get( id=pk )
+    updateForm = TodoForm(instance= todo)
+    
+    if request.method == 'POST':
+        updateForm = TodoForm(request.POST, instance = todo ) #edit current item, not create a new one
+
+        if updateForm.is_valid():
+            updateForm.save()
+            return redirect('alltodos')
+
+    return render(request, 'updateItem.html', {'todo': todo, 'updateForm': updateForm} )
+
+
+def deleteItem(request, pk):
+    task = MytodoModel.objects.get( id=pk )
+    task.delete()
+    return redirect('alltodos')
+
+
+----------------------------------------------------------------------------------------------
+urls.py:
+
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('', views.alltodos, name = 'alltodos' ),
+    path('delete_item<int:pk>', views.deleteItem, name = 'deleteItem'),
+    path('update_item<int:pk>', views.updateItem, name = 'updateItem')
+]
+
+
+----------------------------------------------------------------------------------------------
+forms.py:
+
+from django import forms
+from .models import MytodoModel
+
+
+class TodoForm(forms.ModelForm):
+    class Meta:
+        model = MytodoModel
+        fields = ['task', ]
+
+
+----------------------------------------------------------------------------------------------
+alltodo.html:
+
+<form method="POST">
+    {% csrf_token %}
+        {{form}}
+    <button type = 'submit'>Submit</button>
+</form>
+{% for todo in task %}
+<p> {{ todo.task }} </p>
+<a href ="{% url 'updateItem' todo.id %}"><button>UPDATE</button></a>
+<a href ="{% url 'deleteItem' todo.id %}"><button>DELETE</button></a>
+{% endfor %}
+
+
+----------------------------------------------------------------------------------------------
+updateItem.html:
+
+<form method="POST">
+    {% csrf_token %}
+        {{updateForm}}
+    <button type = 'submit'>UPDATE</button>
+</form>
+
+
+----------------------------------------------------------------------------------------------
